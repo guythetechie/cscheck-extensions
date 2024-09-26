@@ -41,17 +41,7 @@ public class GeneratorTests
     }
 
     [Fact]
-    public void SubFrozenSetOf_set_returns_subset()
-    {
-        var generator = from source in Gen.String.List
-                        from subset in Generator.SubFrozenSetOf(source.ToFrozenSet())
-                        select (source, subset);
-
-        generator.Sample((source, subset) => subset.Should().BeSubsetOf(source));
-    }
-
-    [Fact]
-    public void SubFrozenSetOf_collection_returns_subset()
+    public void SubFrozenSetOf_returns_subset()
     {
         var generator = from source in Gen.String.List
                         from subset in Generator.SubFrozenSetOf(source)

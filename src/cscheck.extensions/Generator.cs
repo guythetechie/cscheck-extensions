@@ -35,14 +35,19 @@ public static class Generator
         : from items in Gen.Shuffle(collection.ToArray(), collection.Count)
           select items.ToImmutableArray();
 
-    public static Gen<FrozenSet<T>> SubFrozenSetOf<T>(FrozenSet<T> set) =>
-        SubFrozenSetOf(set, set.Comparer);
+    public static Gen<FrozenSet<T>> SubFrozenSetOf<T>(ICollection<T> collection, IEqualityComparer<T>? comparer = default)
+    {
+        var comparerToUse = (comparer, collection) switch
+        {
+            (null, FrozenSet<T> frozenSet) => frozenSet.Comparer,
+            _ => comparer
+        };
 
-    public static Gen<FrozenSet<T>> SubFrozenSetOf<T>(ICollection<T> collection, IEqualityComparer<T>? comparer = default) =>
-        collection.Count is 0
-        ? Gen.Const(FrozenSet<T>.Empty)
-        : from items in Gen.Shuffle(collection.ToArray(), collection.Count)
-          select items.ToFrozenSet(comparer);
+        return collection.Count is 0
+                ? Gen.Const(FrozenSet<T>.Empty)
+                : from items in Gen.Shuffle(collection.ToArray(), collection.Count)
+                  select items.ToFrozenSet(comparerToUse);
+    }
 
     public static Gen<Option<T>> OptionOf<T>(this Gen<T> gen) =>
         Gen.Frequency((1, Gen.Const(Option<T>.None)),
