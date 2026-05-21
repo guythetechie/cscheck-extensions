@@ -19,6 +19,29 @@ public class StringGenerator_Any_Tests
     }
 }
 
+public class StringGenerator_Whitespace_Tests
+{
+    [Test]
+    public async ValueTask Contains_only_whitespace_characters()
+    {
+        var gen = StringGenerator.Whitespace;
+
+        await gen.SampleAsync(async str =>
+        {
+            await Assert.That(str.AsEnumerable())
+                        .All(char.IsWhiteSpace);
+        });
+    }
+
+    [Test]
+    public async ValueTask Can_generate_empty_values()
+    {
+        var gen = StringGenerator.Whitespace;
+
+        await Assert.That(gen).CanGenerate(str => str is []);
+    }
+}
+
 public class StringGenerator_NullOrWhitespace_Tests
 {
     [Test]
@@ -30,6 +53,30 @@ public class StringGenerator_NullOrWhitespace_Tests
         {
             await Assert.That(str).IsNullOrWhiteSpace();
         });
+    }
+
+    [Test]
+    public async ValueTask Can_generate_null_values()
+    {
+        var gen = StringGenerator.NullOrWhitespace;
+
+        await Assert.That(gen).CanGenerate(str => str is null);
+    }
+
+    [Test]
+    public async ValueTask Can_generate_empty_values()
+    {
+        var gen = StringGenerator.NullOrWhitespace;
+
+        await Assert.That(gen).CanGenerate(str => str is (not null) and []);
+    }
+
+    [Test]
+    public async ValueTask Can_generate_whitespace_values()
+    {
+        var gen = StringGenerator.NullOrWhitespace;
+
+        await Assert.That(gen).CanGenerate(str => str is (not null) and (not []) && str.All(char.IsWhiteSpace));
     }
 }
 
@@ -58,6 +105,14 @@ public class StringGenerator_Guid_Tests
         {
             await Assert.That(Guid.TryParse(str, out _)).IsTrue();
         });
+    }
+
+    [Test]
+    public async ValueTask Can_generate_an_empty_guid()
+    {
+        var gen = StringGenerator.Guid;
+
+        await Assert.That(gen).CanGenerate(str => Guid.TryParse(str, out var guid) && guid == Guid.Empty);
     }
 }
 
@@ -204,6 +259,22 @@ public class StringGenerator_AlphaNumeric_Tests
                         .All(char.IsLetterOrDigit);
         });
     }
+
+    [Test]
+    public async ValueTask Can_generate_letters()
+    {
+        var gen = StringGenerator.AlphaNumeric;
+
+        await Assert.That(gen).CanGenerate(str => str.Any(char.IsLetter));
+    }
+
+    [Test]
+    public async ValueTask Can_generate_digits()
+    {
+        var gen = StringGenerator.AlphaNumeric;
+
+        await Assert.That(gen).CanGenerate(str => str.Any(char.IsDigit));
+    }
 }
 
 public class StringGenerator_Alphabetic_Tests
@@ -230,6 +301,22 @@ public class StringGenerator_Alphabetic_Tests
             await Assert.That(str.AsEnumerable())
                         .All(char.IsLetter);
         });
+    }
+
+    [Test]
+    public async ValueTask Can_generate_uppercase_letters()
+    {
+        var gen = StringGenerator.Alphabetic;
+
+        await Assert.That(gen).CanGenerate(str => str.Any(char.IsUpper));
+    }
+
+    [Test]
+    public async ValueTask Can_generate_lowercase_letters()
+    {
+        var gen = StringGenerator.Alphabetic;
+
+        await Assert.That(gen).CanGenerate(str => str.Any(char.IsLower));
     }
 }
 

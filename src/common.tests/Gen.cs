@@ -8,6 +8,264 @@ using TUnit.Assertions.Enums;
 
 namespace common.tests;
 
+public class Generator_SubArrayOf_Tests
+{
+    [Test]
+    public async ValueTask Returns_values_from_the_input_collection()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from subArray in fixture.Run()
+            let input = fixture.Collection
+            select (input, subArray);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (input, subArray) = tuple;
+
+            // Assert
+            await Assert.That(subArray.Except(input))
+                        .IsEmpty();
+        });
+    }
+
+    [Test]
+    public async ValueTask Returns_an_array_with_count_in_the_default_range()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from subArray in fixture.Run()
+            let collectionCount = fixture.Collection.Length
+            select (collectionCount, subArray);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (collectionCount, subArray) = tuple;
+
+            // Assert
+            await Assert.That(subArray.Length).IsBetween(0, collectionCount);
+        });
+    }
+
+    private sealed record Fixture
+    {
+        public required string[] Collection { get; init; }
+
+        public Gen<ImmutableArray<string>> Run() => Generator.SubArrayOf(Collection);
+
+        public static Gen<Fixture> Generate() =>
+            from collection in Gen.String.Array
+            select new Fixture
+            {
+                Collection = collection
+            };
+    }
+}
+
+public class Generator_SubArrayOf_With_Length_Tests
+{
+    [Test]
+    public async ValueTask Returns_values_from_the_input_collection()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from subArray in fixture.Run()
+            let input = fixture.Collection
+            select (input, subArray);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (input, subArray) = tuple;
+
+            // Assert
+            await Assert.That(subArray.Except(input))
+                        .IsEmpty();
+        });
+    }
+
+    [Test]
+    public async ValueTask Returns_an_array_with_the_specified_length()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from subArray in fixture.Run()
+            let length = fixture.Length
+            select (length, subArray);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (length, subArray) = tuple;
+
+            // Assert
+            await Assert.That(subArray.Length).IsEqualTo(length);
+        });
+    }
+
+    [Test]
+    public async ValueTask Throws_if_the_length_is_less_than_zero()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from length in Gen.Int[int.MinValue, -1]
+            let updatedFixture = fixture with { Length = length }
+            select updatedFixture;
+
+        await gen.SampleAsync(async fixture =>
+        {
+            // Assert
+            await Assert.That(fixture.Run).Throws<ArgumentOutOfRangeException>();
+        });
+    }
+
+    [Test]
+    public async ValueTask Throws_if_the_length_is_greater_than_the_collection_count()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from length in Gen.Int[fixture.Collection.Length + 1, int.MaxValue]
+            let updatedFixture = fixture with { Length = length }
+            select updatedFixture;
+
+        await gen.SampleAsync(async fixture =>
+        {
+            // Assert
+            await Assert.That(fixture.Run).Throws<ArgumentOutOfRangeException>();
+        });
+    }
+
+    private sealed record Fixture
+    {
+        public required string[] Collection { get; init; }
+        public required int Length { get; init; }
+
+        public Gen<ImmutableArray<string>> Run() => Generator.SubArrayOf(Collection, Length);
+
+        public static Gen<Fixture> Generate() =>
+            from collection in Gen.String.Array
+            from length in Gen.Int[0, collection.Length]
+            select new Fixture
+            {
+                Collection = collection,
+                Length = length
+            };
+    }
+}
+
+public class Generator_SubArrayOf_With_MinimumLength_And_MaximumLength_Tests
+{
+    [Test]
+    public async ValueTask Returns_values_from_the_input_collection()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from subArray in fixture.Run()
+            let input = fixture.Collection
+            select (input, subArray);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (input, subArray) = tuple;
+
+            // Assert
+            await Assert.That(subArray.Except(input))
+                        .IsEmpty();
+        });
+    }
+
+    [Test]
+    public async ValueTask Returns_an_array_with_count_in_the_specified_range()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from subArray in fixture.Run()
+            let minimumLength = fixture.MinimumLength
+            let maximumLength = fixture.MaximumLength
+            select (minimumLength, maximumLength, subArray);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (minimumLength, maximumLength, subArray) = tuple;
+
+            // Assert
+            await Assert.That(subArray.Length).IsBetween(minimumLength, maximumLength);
+        });
+    }
+
+    [Test]
+    public async ValueTask Throws_if_the_minimum_length_is_less_than_zero()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from minimumLength in Gen.Int[int.MinValue, -1]
+            let updatedFixture = fixture with { MinimumLength = minimumLength }
+            select updatedFixture;
+
+        await gen.SampleAsync(async fixture =>
+        {
+            // Assert
+            await Assert.That(fixture.Run).Throws<ArgumentOutOfRangeException>();
+        });
+    }
+
+    [Test]
+    public async ValueTask Throws_if_the_minimum_length_is_greater_than_the_collection_count()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from minimumLength in Gen.Int[fixture.Collection.Length + 1, int.MaxValue]
+            let updatedFixture = fixture with { MinimumLength = minimumLength }
+            select updatedFixture;
+
+        await gen.SampleAsync(async fixture =>
+        {
+            // Assert
+            await Assert.That(fixture.Run).Throws<ArgumentOutOfRangeException>();
+        });
+    }
+
+    [Test]
+    public async ValueTask Throws_if_the_minimum_length_is_greater_than_the_maximum_length()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from minimumLength in Gen.Int[fixture.MaximumLength + 1, int.MaxValue]
+            let updatedFixture = fixture with { MinimumLength = minimumLength }
+            select updatedFixture;
+
+        await gen.SampleAsync(async fixture =>
+        {
+            // Assert
+            await Assert.That(fixture.Run).Throws<ArgumentOutOfRangeException>();
+        });
+    }
+
+    private sealed record Fixture
+    {
+        public required string[] Collection { get; init; }
+        public required int MinimumLength { get; init; }
+        public required int MaximumLength { get; init; }
+
+        public Gen<ImmutableArray<string>> Run() => Generator.SubArrayOf(Collection, MinimumLength, MaximumLength);
+
+        public static Gen<Fixture> Generate() =>
+            from collection in Gen.String.Array
+            from minimumLength in Gen.Int[0, collection.Length]
+            from maximumLength in Gen.Int[minimumLength, collection.Length]
+            select new Fixture
+            {
+                Collection = collection,
+                MinimumLength = minimumLength,
+                MaximumLength = maximumLength
+            };
+    }
+}
+
 public class Generator_SubSetOf_Tests
 {
     [Test]

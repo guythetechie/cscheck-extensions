@@ -52,6 +52,24 @@ public static class Generator
                   select (object)x,
                   from x in Gen.UShort
                   select (object)x);
+
+    public static Gen<ImmutableArray<T>> SubArrayOf<T>(ICollection<T> collection) =>
+        SubArrayOf(collection, minimumLength: 0, maximumLength: collection.Count);
+
+    public static Gen<ImmutableArray<T>> SubArrayOf<T>(ICollection<T> collection, int length) =>
+        SubArrayOf(collection, minimumLength: length, maximumLength: length);
+
+    public static Gen<ImmutableArray<T>> SubArrayOf<T>(ICollection<T> collection, int minimumLength, int maximumLength)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(minimumLength);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(minimumLength, collection.Count);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumLength, minimumLength);
+
+        return from length in Gen.Int[minimumLength, Math.Min(collection.Count, maximumLength)]
+               from subArray in Gen.Shuffle(constants: [.. collection], length)
+               select subArray.ToImmutableArray();
+    }
+
     public static Gen<ImmutableHashSet<T>> SubSetOf<T>(ICollection<T> collection, IEqualityComparer<T>? comparer = default) =>
         SubSetOf(collection, minimumLength: 0, maximumLength: collection.Count, comparer);
 
