@@ -69,7 +69,7 @@ public static class Generator
         return from length in Gen.Int[minimumLength, Math.Min(collectionSet.Count, maximumLength)]
                from set in length switch
                {
-                   0 => Gen.Const(ImmutableHashSet<T>.Empty.WithComparer(comparer)),
+                   0 => Gen.Const(ImmutableHashSet.Create(comparer)),
                    _ => from list in Gen.Shuffle(constants: [.. collectionSet], length)
                         select list.ToImmutableHashSet(comparer)
                }
@@ -93,7 +93,7 @@ public static class Generator
 
         return from items in gen.Array[minimumLength, maximumLength]
                let set = comparer is null
-                   ? [.. items]
+                   ? [with(comparer), .. items]
                    : items.ToImmutableHashSet(comparer)
                where set.Count >= minimumLength && set.Count <= maximumLength
                select set;

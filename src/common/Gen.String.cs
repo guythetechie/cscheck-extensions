@@ -7,6 +7,11 @@ namespace common;
 
 public static class StringGenerator
 {
+    public static Gen<string> Any { get; } =
+        from str in Gen.String
+        where str is not null
+        select str;
+
     public static Gen<string?> NullOrWhitespace { get; } =
         from str in Gen.String.Null()
         where string.IsNullOrWhiteSpace(str)
