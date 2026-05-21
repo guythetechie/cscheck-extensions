@@ -214,15 +214,18 @@ public class Generator_SubSetOf_With_MinimumLength_And_MaximumLength_Tests
         var gen =
             from fixture in Fixture.Generate()
             from subset in fixture.Run()
-            select (fixture, subset);
+            let input = fixture.Collection
+            let comparer = fixture.Comparer
+            select (input, comparer, subset);
 
         await gen.SampleAsync(async tuple =>
         {
             // Arrange
-            var (fixture, subset) = tuple;
+            var (input, comparer, subset) = tuple;
 
             // Assert
-            await Assert.That(subset).IsSubsetOf(fixture.Collection);
+            await Assert.That(subset.Except(input, comparer))
+                        .IsEmpty();
         });
     }
 
@@ -232,15 +235,42 @@ public class Generator_SubSetOf_With_MinimumLength_And_MaximumLength_Tests
         var gen =
             from fixture in Fixture.Generate()
             from subset in fixture.Run()
-            select (fixture, subset);
+            let minimumLength = fixture.MinimumLength
+            let maximumLength = fixture.MaximumLength
+            select (minimumLength, maximumLength, subset);
 
         await gen.SampleAsync(async tuple =>
         {
             // Arrange
-            var (fixture, subset) = tuple;
+            var (minimumLength, maximumLength, subset) = tuple;
 
             // Assert
-            await Assert.That(subset.Count).IsBetween(fixture.MinimumLength, fixture.MaximumLength);
+            await Assert.That(subset.Count).IsBetween(minimumLength, maximumLength);
+        });
+    }
+
+    [Test]
+    public async ValueTask Returns_a_subset_with_the_passed_comparer()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from subset in fixture.Run()
+            from testArray in
+                from testString in StringGenerator.Alphabetic
+                from randomizedCases in StringGenerator.RandomizeCapitalization(testString).Array
+                select randomizedCases.ToImmutableArray()
+            let inputComparer = fixture.Comparer
+            let subsetComparer = subset.KeyComparer
+            select (inputComparer, subsetComparer, testArray);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (inputComparer, subsetComparer, testArray) = tuple;
+
+            // Assert
+            await Assert.That(testArray.ToImmutableHashSet(inputComparer))
+                        .IsEquivalentTo(testArray.ToImmutableHashSet(subsetComparer));
         });
     }
 
@@ -265,7 +295,7 @@ public class Generator_SubSetOf_With_MinimumLength_And_MaximumLength_Tests
     {
         var gen =
             from fixture in Fixture.Generate()
-            from minimumLength in Gen.Int[fixture.Collection.ToImmutableHashSet().Count + 1, int.MaxValue]
+            from minimumLength in Gen.Int[fixture.Collection.ToImmutableHashSet(fixture.Comparer).Count + 1, int.MaxValue]
             let updatedFixture = fixture with { MinimumLength = minimumLength }
             select updatedFixture;
 
@@ -294,21 +324,30 @@ public class Generator_SubSetOf_With_MinimumLength_And_MaximumLength_Tests
 
     private sealed record Fixture
     {
-        public required ICollection<object> Collection { get; init; }
+        public required ICollection<string> Collection { get; init; }
         public required int MinimumLength { get; init; }
         public required int MaximumLength { get; init; }
-        public IEqualityComparer<object>? Comparer { get; init; }
+        public IEqualityComparer<string>? Comparer { get; init; }
 
-        public Gen<ImmutableHashSet<object>> Run() => Generator.SubSetOf(Collection, MinimumLength, MaximumLength, Comparer);
+        public Gen<ImmutableHashSet<string>> Run() => Generator.SubSetOf(Collection, MinimumLength, MaximumLength, Comparer);
 
         public static Gen<Fixture> Generate() =>
-            from collection in Generator.Object.Array
-            let set = collection.ToImmutableHashSet()
+            from collection in Gen.String.Array
+            from comparer in
+                Gen.OneOfConst(null,
+                               StringComparer.Ordinal,
+                               StringComparer.OrdinalIgnoreCase,
+                               StringComparer.CurrentCulture,
+                               StringComparer.CurrentCultureIgnoreCase,
+                               StringComparer.InvariantCulture,
+                               StringComparer.InvariantCultureIgnoreCase)
+            let set = collection.ToImmutableHashSet(comparer)
             from minimumLength in Gen.Int[0, set.Count]
             from maximumLength in Gen.Int[minimumLength, int.MaxValue]
             select new Fixture
             {
                 Collection = collection,
+                Comparer = comparer,
                 MinimumLength = minimumLength,
                 MaximumLength = maximumLength
             };
