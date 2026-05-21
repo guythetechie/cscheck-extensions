@@ -670,3 +670,243 @@ public class Generator_HashSetOf_With_MinimumLength_And_MaximumLength_Tests
             };
     }
 }
+
+public class Generator_ArrayOf_Tests
+{
+    [Test]
+    public async ValueTask Returns_values_generated_by_the_source()
+    {
+        var gen =
+            from sources in
+                from sources in StringGenerator.Any.Array
+                where sources.Length > 0
+                select sources
+            from fixture in
+                from fixture in Fixture.Generate()
+                let fixtureGen = Gen.OneOfConst([.. sources])
+                select fixture with { Gen = fixtureGen }
+            from array in fixture.Run()
+            select (sources, array);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (sources, array) = tuple;
+
+            // Assert
+            await Assert.That(array.Except(sources))
+                        .IsEmpty();
+        });
+    }
+
+    [Test]
+    public async ValueTask Returns_an_array_with_count_in_the_default_range()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from array in fixture.Run()
+            select array;
+
+        await gen.SampleAsync(async array =>
+        {
+            // Assert
+            await Assert.That(array.Length).IsBetween(0, 10);
+        });
+    }
+
+    private sealed record Fixture
+    {
+        public required Gen<string> Gen { get; init; }
+
+        public Gen<ImmutableArray<string>> Run() =>
+            Gen.ArrayOf();
+
+        public static Gen<Fixture> Generate() =>
+            CsCheck.Gen.Const(new Fixture
+            {
+                Gen = StringGenerator.Any
+            });
+    }
+}
+
+public class Generator_ArrayOf_With_Length_Tests
+{
+    [Test]
+    public async ValueTask Returns_values_generated_by_the_source()
+    {
+        var gen =
+            from sources in
+                from sources in StringGenerator.Any.Array
+                where sources.Length > 0
+                select sources
+            from fixture in
+                from fixture in Fixture.Generate()
+                let fixtureGen = Gen.OneOfConst([.. sources])
+                select fixture with { Gen = fixtureGen }
+            from array in fixture.Run()
+            select (sources, array);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (sources, array) = tuple;
+
+            // Assert
+            await Assert.That(array.Except(sources))
+                        .IsEmpty();
+        });
+    }
+
+    [Test]
+    public async ValueTask Returns_an_array_with_the_specified_length()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from array in fixture.Run()
+            let length = fixture.Length
+            select (length, array);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (length, array) = tuple;
+
+            // Assert
+            await Assert.That(array.Length).IsEqualTo(length);
+        });
+    }
+
+    [Test]
+    public async ValueTask Throws_if_the_length_is_less_than_zero()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from length in Gen.Int[int.MinValue, -1]
+            let updatedFixture = fixture with { Length = length }
+            select updatedFixture;
+
+        await gen.SampleAsync(async fixture =>
+        {
+            // Assert
+            await Assert.That(fixture.Run).Throws<ArgumentOutOfRangeException>();
+        });
+    }
+
+    private sealed record Fixture
+    {
+        public required Gen<string> Gen { get; init; }
+        public required int Length { get; init; }
+
+        public Gen<ImmutableArray<string>> Run() =>
+            Gen.ArrayOf(Length);
+
+        public static Gen<Fixture> Generate() =>
+            from length in CsCheck.Gen.Int[0, 10]
+            select new Fixture
+            {
+                Gen = StringGenerator.Any,
+                Length = length
+            };
+    }
+}
+
+public class Generator_ArrayOf_With_MinimumLength_And_MaximumLength_Tests
+{
+    [Test]
+    public async ValueTask Returns_values_generated_by_the_source()
+    {
+        var gen =
+            from sources in
+                from sources in StringGenerator.Any.Array
+                where sources.Length > 0
+                select sources
+            from fixture in
+                from fixture in Fixture.Generate()
+                let fixtureGen = Gen.OneOfConst([.. sources])
+                select fixture with { Gen = fixtureGen }
+            from array in fixture.Run()
+            select (sources, array);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (sources, array) = tuple;
+
+            // Assert
+            await Assert.That(array.Except(sources))
+                        .IsEmpty();
+        });
+    }
+
+    [Test]
+    public async ValueTask Returns_an_array_with_count_in_the_specified_range()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from array in fixture.Run()
+            let minimumLength = fixture.MinimumLength
+            let maximumLength = fixture.MaximumLength
+            select (minimumLength, maximumLength, array);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (minimumLength, maximumLength, array) = tuple;
+
+            // Assert
+            await Assert.That(array.Length).IsBetween(minimumLength, maximumLength);
+        });
+    }
+
+    [Test]
+    public async ValueTask Throws_if_the_minimum_length_is_less_than_zero()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from minimumLength in Gen.Int[int.MinValue, -1]
+            let updatedFixture = fixture with { MinimumLength = minimumLength }
+            select updatedFixture;
+
+        await gen.SampleAsync(async fixture =>
+        {
+            // Assert
+            await Assert.That(fixture.Run).Throws<ArgumentOutOfRangeException>();
+        });
+    }
+
+    [Test]
+    public async ValueTask Throws_if_the_minimum_length_is_greater_than_the_maximum_length()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from minimumLength in Gen.Int[fixture.MaximumLength + 1, int.MaxValue]
+            let updatedFixture = fixture with { MinimumLength = minimumLength }
+            select updatedFixture;
+
+        await gen.SampleAsync(async fixture =>
+        {
+            // Assert
+            await Assert.That(fixture.Run).Throws<ArgumentOutOfRangeException>();
+        });
+    }
+
+    private sealed record Fixture
+    {
+        public required Gen<string> Gen { get; init; }
+        public required int MinimumLength { get; init; }
+        public required int MaximumLength { get; init; }
+
+        public Gen<ImmutableArray<string>> Run() =>
+            Gen.ArrayOf(MinimumLength, MaximumLength);
+
+        public static Gen<Fixture> Generate() =>
+            from minimumLength in CsCheck.Gen.Int[0, 10]
+            from maximumLength in CsCheck.Gen.Int[minimumLength, 10]
+            select new Fixture
+            {
+                Gen = StringGenerator.Any,
+                MinimumLength = minimumLength,
+                MaximumLength = maximumLength
+            };
+    }
+}
