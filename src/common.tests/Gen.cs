@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using TUnit.Assertions.Enums;
 
 namespace common.tests;
 
@@ -907,6 +908,102 @@ public class Generator_ArrayOf_With_MinimumLength_And_MaximumLength_Tests
                 Gen = StringGenerator.Any,
                 MinimumLength = minimumLength,
                 MaximumLength = maximumLength
+            };
+    }
+}
+
+public class Generator_Traverse_Tests
+{
+    [Test]
+    public async ValueTask Satisfies_identity_law()
+    {
+        var gen =
+            from fixture in
+                from fixture in Fixture.Generate()
+                let mapper = new Func<object, Gen<object>>(x => Gen.Const(x))
+                select fixture with { Mapper = mapper }
+            from result in fixture.Run()
+            let source = fixture.Source
+            select (source, result);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (source, result) = tuple;
+
+            // Assert
+            await Assert.That(result).IsEquivalentTo(source, CollectionOrdering.Matching);
+        });
+    }
+
+    [Test]
+    public async ValueTask Satisfies_naturality_law()
+    {
+        var gen =
+            from g in MapperGenerator.ObjectToObject
+            from fixture in Fixture.Generate()
+            from result1 in
+                from result in fixture.Run()
+                select result.Select(g)
+            from result2 in
+                from updatedFixture in
+                    Gen.Const(fixture with
+                    {
+                        Mapper = x => fixture.Mapper(x).Select(g)
+                    })
+                from result in updatedFixture.Run()
+                select result
+            select (result1, result2);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (result1, result2) = tuple;
+
+            // Assert
+            await Assert.That(result1).IsEquivalentTo(result2, CollectionOrdering.Matching);
+        });
+    }
+
+    [Test]
+    public async ValueTask Does_not_reuse_accumulator_between_samples()
+    {
+        var source = new[] { 1, 2 };
+        var traversed = Generator.Traverse(source, Gen.Const);
+
+        var gen =
+            from first in traversed
+            from second in traversed
+            select (first, second);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (first, second) = tuple;
+
+            // Assert
+            await Assert.That(first).IsEquivalentTo(source, CollectionOrdering.Matching);
+            await Assert.That(second).IsEquivalentTo(source, CollectionOrdering.Matching);
+        });
+    }
+
+    private sealed record Fixture
+    {
+        public required IEnumerable<object> Source { get; init; }
+        public required Func<object, Gen<object>> Mapper { get; init; }
+
+        public Gen<ImmutableArray<object>> Run() =>
+            Generator.Traverse(Source, Mapper);
+
+        public static Gen<Fixture> Generate() =>
+            from source in Generator.Object.Array
+            from mapper in
+                from mapper in MapperGenerator.ObjectToObject
+                select new Func<object, Gen<object>>(x => Gen.Const(mapper(x)))
+            select new Fixture
+            {
+                Source = source,
+                Mapper = mapper
             };
     }
 }

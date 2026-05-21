@@ -115,13 +115,8 @@ public static class Generator
     }
 
     public static Gen<ImmutableArray<T2>> Traverse<T1, T2>(IEnumerable<T1> source, Func<T1, Gen<T2>> f) =>
-        source.Aggregate(Gen.Const(new List<T2>()),
-                         (listGen, item) => Gen.Select(listGen, f(item))
-                                               .Select(x =>
-                                               {
-                                                   var (list, item) = x;
-                                                   list.Add(item);
-                                                   return list;
-                                               }))
-               .Select(list => list.ToImmutableArray());
+        source.Aggregate(Gen.Const(ImmutableArray.Create<T2>()),
+                         (arrayGen, t1) => from array in arrayGen
+                                           from t2 in f(t1)
+                                           select array.Add(t2));
 }
