@@ -64,7 +64,7 @@ public class Generator_SubSetOf_Tests
 
         public static Gen<Fixture> Generate() =>
             from collection in Gen.String.Array
-            from comparer in StringGenerator.Comparer
+            from comparer in StringGenerator.Comparer.Null()
             select new Fixture
             {
                 Collection = collection,
@@ -182,7 +182,7 @@ public class Generator_SubSetOf_With_Length_Tests
 
         public static Gen<Fixture> Generate() =>
             from collection in Gen.String.Array
-            from comparer in StringGenerator.Comparer
+            from comparer in StringGenerator.Comparer.Null()
             from length in Gen.Int[0, collection.ToImmutableHashSet(comparer).Count]
             select new Fixture
             {
@@ -320,7 +320,7 @@ public class Generator_SubSetOf_With_MinimumLength_And_MaximumLength_Tests
 
         public static Gen<Fixture> Generate() =>
             from collection in Gen.String.Array
-            from comparer in StringGenerator.Comparer
+            from comparer in StringGenerator.Comparer.Null()
             let set = collection.ToImmutableHashSet(comparer)
             from minimumLength in Gen.Int[0, set.Count]
             from maximumLength in Gen.Int[minimumLength, int.MaxValue]
@@ -411,7 +411,7 @@ public class Generator_HashSetOf_Tests
             Gen.HashSetOf(Comparer);
 
         public static Gen<Fixture> Generate() =>
-            from comparer in StringGenerator.Comparer
+            from comparer in StringGenerator.Comparer.Null()
             select new Fixture
             {
                 Gen = StringGenerator.Any,
@@ -524,7 +524,7 @@ public class Generator_HashSetOf_With_Length_Tests
             Gen.HashSetOf(Length, Comparer);
 
         public static Gen<Fixture> Generate() =>
-            from comparer in StringGenerator.Comparer
+            from comparer in StringGenerator.Comparer.Null()
             from length in CsCheck.Gen.Int[0, 10]
             select new Fixture
             {
@@ -659,7 +659,7 @@ public class Generator_HashSetOf_With_MinimumLength_And_MaximumLength_Tests
             Gen.HashSetOf(MinimumLength, MaximumLength, Comparer);
 
         public static Gen<Fixture> Generate() =>
-            from comparer in StringGenerator.Comparer
+            from comparer in StringGenerator.Comparer.Null()
             from minimumLength in CsCheck.Gen.Int[0, 10]
             from maximumLength in CsCheck.Gen.Int[minimumLength, 10]
             select new Fixture
