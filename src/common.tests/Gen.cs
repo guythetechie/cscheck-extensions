@@ -87,33 +87,62 @@ public class Generator_SubSetOf_With_Length_Tests
         var gen =
             from fixture in Fixture.Generate()
             from subset in fixture.Run()
-            select (fixture, subset);
+            let input = fixture.Collection
+            let comparer = fixture.Comparer
+            select (input, comparer, subset);
 
         await gen.SampleAsync(async tuple =>
         {
             // Arrange
-            var (fixture, result) = tuple;
+            var (input, comparer, subset) = tuple;
 
             // Assert
-            await Assert.That(result).IsSubsetOf(fixture.Collection);
+            await Assert.That(subset.Except(input, comparer))
+                        .IsEmpty();
         });
     }
 
     [Test]
-    public async ValueTask Returns_a_subset_with_count_in_the_specified_range()
+    public async ValueTask Returns_a_subset_with_the_specified_length()
     {
         var gen =
             from fixture in Fixture.Generate()
             from subset in fixture.Run()
-            select (fixture, subset);
+            let length = fixture.Length
+            select (length, subset);
 
         await gen.SampleAsync(async tuple =>
         {
             // Arrange
-            var (fixture, subset) = tuple;
+            var (length, subset) = tuple;
 
             // Assert
-            await Assert.That(subset.Count).IsEqualTo(fixture.Length);
+            await Assert.That(subset.Count).IsEqualTo(length);
+        });
+    }
+
+    [Test]
+    public async ValueTask Returns_a_subset_with_the_passed_comparer()
+    {
+        var gen =
+            from fixture in Fixture.Generate()
+            from subset in fixture.Run()
+            from testArray in
+                from testString in StringGenerator.Alphabetic
+                from randomizedCases in StringGenerator.RandomizeCapitalization(testString).Array
+                select randomizedCases.ToImmutableArray()
+            let inputComparer = fixture.Comparer
+            let subsetComparer = subset.KeyComparer
+            select (inputComparer, subsetComparer, testArray);
+
+        await gen.SampleAsync(async tuple =>
+        {
+            // Arrange
+            var (inputComparer, subsetComparer, testArray) = tuple;
+
+            // Assert
+            await Assert.That(testArray.ToImmutableHashSet(inputComparer))
+                        .IsEquivalentTo(testArray.ToImmutableHashSet(subsetComparer));
         });
     }
 
@@ -138,7 +167,7 @@ public class Generator_SubSetOf_With_Length_Tests
     {
         var gen =
             from fixture in Fixture.Generate()
-            from length in Gen.Int[fixture.Collection.ToImmutableHashSet().Count + 1, int.MaxValue]
+            from length in Gen.Int[fixture.Collection.ToImmutableHashSet(fixture.Comparer).Count + 1, int.MaxValue]
             let updatedFixture = fixture with { Length = length }
             select updatedFixture;
 
@@ -151,18 +180,27 @@ public class Generator_SubSetOf_With_Length_Tests
 
     private sealed record Fixture
     {
-        public required ICollection<object> Collection { get; init; }
+        public required ICollection<string> Collection { get; init; }
         public required int Length { get; init; }
-        public IEqualityComparer<object>? Comparer { get; init; }
+        public IEqualityComparer<string>? Comparer { get; init; }
 
-        public Gen<ImmutableHashSet<object>> Run() => Generator.SubSetOf(Collection, Length, Comparer);
+        public Gen<ImmutableHashSet<string>> Run() => Generator.SubSetOf(Collection, Length, Comparer);
 
         public static Gen<Fixture> Generate() =>
-            from collection in Generator.Object.Array
-            from length in Gen.Int[0, collection.ToImmutableHashSet().Count]
+            from collection in Gen.String.Array
+            from comparer in
+                Gen.OneOfConst(null,
+                               StringComparer.Ordinal,
+                               StringComparer.OrdinalIgnoreCase,
+                               StringComparer.CurrentCulture,
+                               StringComparer.CurrentCultureIgnoreCase,
+                               StringComparer.InvariantCulture,
+                               StringComparer.InvariantCultureIgnoreCase)
+            from length in Gen.Int[0, collection.ToImmutableHashSet(comparer).Count]
             select new Fixture
             {
                 Collection = collection,
+                Comparer = comparer,
                 Length = length
             };
     }
