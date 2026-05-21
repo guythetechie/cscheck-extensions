@@ -63,14 +63,7 @@ public class Generator_SubSetOf_Tests
 
         public static Gen<Fixture> Generate() =>
             from collection in Gen.String.Array
-            from comparer in
-                Gen.OneOfConst(null,
-                               StringComparer.Ordinal,
-                               StringComparer.OrdinalIgnoreCase,
-                               StringComparer.CurrentCulture,
-                               StringComparer.CurrentCultureIgnoreCase,
-                               StringComparer.InvariantCulture,
-                               StringComparer.InvariantCultureIgnoreCase)
+            from comparer in StringGenerator.Comparer
             select new Fixture
             {
                 Collection = collection,
@@ -188,14 +181,7 @@ public class Generator_SubSetOf_With_Length_Tests
 
         public static Gen<Fixture> Generate() =>
             from collection in Gen.String.Array
-            from comparer in
-                Gen.OneOfConst(null,
-                               StringComparer.Ordinal,
-                               StringComparer.OrdinalIgnoreCase,
-                               StringComparer.CurrentCulture,
-                               StringComparer.CurrentCultureIgnoreCase,
-                               StringComparer.InvariantCulture,
-                               StringComparer.InvariantCultureIgnoreCase)
+            from comparer in StringGenerator.Comparer
             from length in Gen.Int[0, collection.ToImmutableHashSet(comparer).Count]
             select new Fixture
             {
@@ -333,14 +319,7 @@ public class Generator_SubSetOf_With_MinimumLength_And_MaximumLength_Tests
 
         public static Gen<Fixture> Generate() =>
             from collection in Gen.String.Array
-            from comparer in
-                Gen.OneOfConst(null,
-                               StringComparer.Ordinal,
-                               StringComparer.OrdinalIgnoreCase,
-                               StringComparer.CurrentCulture,
-                               StringComparer.CurrentCultureIgnoreCase,
-                               StringComparer.InvariantCulture,
-                               StringComparer.InvariantCultureIgnoreCase)
+            from comparer in StringGenerator.Comparer
             let set = collection.ToImmutableHashSet(comparer)
             from minimumLength in Gen.Int[0, set.Count]
             from maximumLength in Gen.Int[minimumLength, int.MaxValue]

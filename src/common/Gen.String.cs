@@ -1,4 +1,6 @@
 ﻿using CsCheck;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace common;
@@ -30,6 +32,15 @@ public static class StringGenerator
         from str in Gen.String.AlphaNumeric
         where string.IsNullOrEmpty(str) is false
         select str;
+
+    public static Gen<IEqualityComparer<string>?> Comparer { get; } =
+        Gen.OneOfConst<IEqualityComparer<string>?>(null,
+                                                  StringComparer.Ordinal,
+                                                  StringComparer.OrdinalIgnoreCase,
+                                                  StringComparer.CurrentCulture,
+                                                  StringComparer.CurrentCultureIgnoreCase,
+                                                  StringComparer.InvariantCulture,
+                                                  StringComparer.InvariantCultureIgnoreCase);
 
     public static Gen<string> Alphabetic { get; } =
         from chars in Gen.Char['a', 'z'].Array
